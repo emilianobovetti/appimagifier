@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+
+docker run \
+  --rm \
+  --volume="$PWD/flake.template.nix:/home/app/flake.template.nix" \
+  --volume="$PWD/out:/home/app/out" \
+  --volume="appimagifier-nix:/nix" \
+  --workdir="/home/app" \
+  nixos/nix sh -c "
+set -xe
+nix-env --install --attr nixpkgs.envsubst
+PACKAGE='$1' envsubst < flake.template.nix > flake.nix
+nix --extra-experimental-features 'nix-command flakes' \
+  bundle \
+  --bundler github:ralismark/nix-appimage \
+  --no-write-lock-file \
+  --out-link out.AppImage .
+cp \$(readlink out.AppImage) '/home/app/out/$1'
+chown $(id -u):$(id -g) '/home/app/out/$1'
+"
